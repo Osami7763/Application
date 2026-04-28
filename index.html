@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دخول - منظم أسامة</title>
+    <style>
+        :root { 
+            --primary: #6366f1; 
+            --bg: #0f172a; 
+            --card: rgba(30, 41, 59, 0.8); 
+            --text: #ffffff; 
+        }
+        
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+
+        .glass-container { 
+            background: var(--card); 
+            backdrop-filter: blur(15px);
+            padding: 40px 30px; 
+            border-radius: 28px; 
+            width: 100%;
+            max-width: 360px; 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .tabs { display: flex; justify-content: space-around; margin-bottom: 30px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 5px; }
+        .tab { padding: 10px 20px; cursor: pointer; color: #94a3b8; font-weight: bold; transition: 0.3s; border-radius: 10px; flex: 1; }
+        .tab.active { color: white; background: var(--primary); }
+
+        h2 { margin-bottom: 25px; font-weight: 600; }
+
+        input { 
+            width: 100%; 
+            padding: 14px; 
+            margin: 10px 0; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            background: rgba(15, 23, 42, 0.6); 
+            color: white; 
+            box-sizing: border-box; 
+            outline: none;
+            transition: 0.3s;
+        }
+        
+        input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background: var(--primary); 
+            border: none; 
+            color: white; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        #msg { margin-top: 20px; font-size: 14px; min-height: 20px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="glass-container">
+    <div class="tabs">
+        <div id="loginTab" class="tab active" onclick="switchMode('login')">دخول</div>
+        <div id="signupTab" class="tab" onclick="switchMode('signup')">تسجيل جديد</div>
+    </div>
+    
+    <h2 id="title">عودة حميداً</h2>
+    
+    <div id="formFields">
+        <input type="text" id="username" class="hidden" placeholder="اسم المستخدم">
+        <input type="email" id="email" placeholder="البريد الإلكتروني">
+        <input type="password" id="password" placeholder="كلمة المرور">
+    </div>
+    
+    <button id="mainBtn" onclick="processData()">دخول</button>
+    <div id="msg"></div>
+</div>
+
+<script>
+    let mode = 'login';
+    const apiURL = 'https://sheetdb.io/api/v1/zfjboqznl1mrg';
+
+    // (1) الفحص التلقائي: إذا مسجل دخول قبل كذا، ينقله فوراً للوحة التحكم
+    window.onload = function() {
+        if (localStorage.getItem('userEmail')) {
+            window.location.href = "dashboard.html";
+        }
+    };
+
+    function switchMode(newMode) {
+        mode = newMode;
+        document.getElementById('loginTab').className = mode === 'login' ? 'tab active' : 'tab';
+        document.getElementById('signupTab').className = mode === 'signup' ? 'tab active' : 'tab';
+        document.getElementById('username').classList.toggle('hidden', mode === 'login');
+        document.getElementById('title').innerText = mode === 'login' ? 'عودة حميداً' : 'إنشاء حساب جديد';
+        document.getElementById('mainBtn').innerText = mode === 'login' ? 'دخول' : 'تسجيل';
+        document.getElementById('msg').innerText = '';
+    }
+
+    async function processData() {
+        const user = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+        const msg = document.getElementById('msg');
+
+        if(!email || !pass || (mode === 'signup' && !user)) {
+            msg.innerText = "كمل البيانات يا بطل! ⚠️";
+            msg.style.color = "#fbbf24";
+            return;
+        }
+
+        msg.innerText = "جاري الاتصال بالقاعدة... ✨";
+        msg.style.color = "#94a3b8";
+
+        try {
+            if (mode === 'login') {
+                const res = await fetch(`${apiURL}/search?email=${email}`);
+                const data = await res.json();
+                
+                if (data.length > 0 && data[0].password == pass) {
+                    // حفظ الجلسة في الجهاز
+                    localStorage.setItem('userName', data[0].username);
+                    localStorage.setItem('userEmail', email);
+                    
+                    msg.innerText = "تم الدخول بنجاح! جاري التحويل...";
+                    msg.style.color = "#10b981";
+                    setTimeout(() => window.location.href = "dashboard.html", 1000);
+                } else {
+                    msg.innerText = "الإيميل أو الباسورد غلط! ❌";
+                    msg.style.color = "#f43f5e";
+                }
+            } else {
+                // منع التكرار في التسجيل
+                const check = await fetch(`${apiURL}/search?email=${email}`);
+                const exists = await check.json();
+
+                if (exists.length > 0) {
+                    msg.innerText = "هذا البريد مستخدم مسبقاً! ❌";
+                    msg.style.color = "#f43f5e";
+                    return;
+                }
+
+                const save = await fetch(apiURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: [{ 
+                        'username': user, 
+                        'email': email, 
+                        'password': pass,
+                        'tasks_done': 0,
+                        'premium_days': 0,
+                        'date': new Date().toLocaleString() 
+                    }] })
+                });
+
+                if (save.ok) {
+                    localStorage.setItem('userName', user);
+                    localStorage.setItem('userEmail', email);
+                    window.location.href = "dashboard.html";
+                }
+            }
+        } catch (e) {
+            msg.innerText = "فشل الاتصال! تأكد من الإنترنت 🌐";
+            msg.style.color = "#f43f5e";
+        }
+    }
+</script>
+</body>
+</html>
